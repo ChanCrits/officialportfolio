@@ -2,6 +2,7 @@ import React from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import AnimatedText from './components/AnimatedText';
+import Skills from './components/Skills';
 
 function App() {
   return (
@@ -35,6 +36,10 @@ function App() {
             className="w-4/5 md:w-1/2 max-w-md object-cover shadow-lg fade-bottom"
             draggable={false}
           />
+          {/* Skills section - positioned on the right */}
+          <div className="absolute right-[2%] md:right-[5%] top-1/2 -translate-y-1/2">
+            <Skills />
+          </div>
         </main>
         <Footer />
       </div>
