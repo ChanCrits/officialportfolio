@@ -10,14 +10,51 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
   const [heartCount, setHeartCount] = useState<number>(0);
   const [isLiked, setIsLiked] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const [userIP, setUserIP] = useState<string>('');
+
+  // Get user's IP address
+  useEffect(() => {
+    const getUserIP = async () => {
+      try {
+        const response = await axios.get('https://api.ipify.org?format=json');
+        setUserIP(response.data.ip);
+      } catch (error) {
+        console.error('Error getting IP:', error);
+        // Fallback: generate a device fingerprint
+        const fingerprint = generateDeviceFingerprint();
+        setUserIP(fingerprint);
+      }
+    };
+
+    getUserIP();
+  }, []);
+
+  // Generate a device fingerprint as fallback
+  const generateDeviceFingerprint = (): string => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    ctx?.fillText('Device Fingerprint', 10, 10);
+    const fingerprint = canvas.toDataURL();
+    
+    // Combine with user agent and screen resolution
+    const userAgent = navigator.userAgent;
+    const screenRes = `${window.screen.width}x${window.screen.height}`;
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    
+    // Create a hash-like string
+    const combined = `${fingerprint}-${userAgent}-${screenRes}-${timezone}`;
+    return btoa(combined).substring(0, 16); // Base64 encode and truncate
+  };
 
   useEffect(() => {
+    if (!userIP) return;
+
     const fetchHeartCount = async () => {
       try {
         const BIN_ID = '684e32b28a456b7966ae519e';
         const API_KEY = '$2a$10$wMRaiZnIvQURH/FT61YRp.Lc9dRC.hFWzvDYmahRDx5q63cOftnwi';
         
-        // Get current heart counts
+        // Get current heart counts and IP tracking
         const response = await axios.get(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
           headers: {
             'X-Master-Key': API_KEY
@@ -26,14 +63,15 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
 
         const data = response.data.record;
         const projectHearts = data.projectHearts || {};
+        const ipReactions = data.ipReactions || {};
         const currentCount = projectHearts[projectId] || 0;
         
-        // Check if user has liked this project
-        const likedProjects = JSON.parse(localStorage.getItem('likedProjects') || '[]');
-        const hasLiked = likedProjects.includes(projectId);
+        // Check if this IP has already reacted to this project
+        const projectIPs = ipReactions[projectId] || [];
+        const hasReacted = projectIPs.includes(userIP);
         
         setHeartCount(currentCount);
-        setIsLiked(hasLiked);
+        setIsLiked(hasReacted);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching heart count:', error);
@@ -42,9 +80,11 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
     };
 
     fetchHeartCount();
-  }, [projectId]);
+  }, [projectId, userIP]);
 
   const handleHeartClick = async () => {
+    if (!userIP) return;
+
     try {
       const BIN_ID = '684e32b28a456b7966ae519e';
       const API_KEY = '$2a$10$wMRaiZnIvQURH/FT61YRp.Lc9dRC.hFWzvDYmahRDx5q63cOftnwi';
@@ -58,23 +98,32 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
 
       const data = response.data.record;
       const projectHearts = data.projectHearts || {};
+      const ipReactions = data.ipReactions || {};
       const currentCount = projectHearts[projectId] || 0;
+      const projectIPs = ipReactions[projectId] || [];
       
-      // Update count based on like status (prevent negative values)
       let newCount;
+      let newIPs;
+      
       if (isLiked) {
-        newCount = Math.max(0, currentCount - 1); // Ensure count doesn't go below 0
+        // Remove reaction
+        newCount = Math.max(0, currentCount - 1);
+        newIPs = projectIPs.filter((ip: string) => ip !== userIP);
       } else {
+        // Add reaction
         newCount = currentCount + 1;
+        newIPs = [...projectIPs, userIP];
       }
       
       projectHearts[projectId] = newCount;
+      ipReactions[projectId] = newIPs;
       
       // Update JSONBin with proper structure
       await axios.put(`https://api.jsonbin.io/v3/b/${BIN_ID}`, 
         { 
           count: data.count || 0,
-          projectHearts 
+          projectHearts,
+          ipReactions
         },
         {
           headers: {
@@ -87,16 +136,6 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
       // Update local state
       setHeartCount(newCount);
       setIsLiked(!isLiked);
-      
-      // Update localStorage
-      const likedProjects = JSON.parse(localStorage.getItem('likedProjects') || '[]');
-      if (isLiked) {
-        const updatedLikedProjects = likedProjects.filter((id: number) => id !== projectId);
-        localStorage.setItem('likedProjects', JSON.stringify(updatedLikedProjects));
-      } else {
-        likedProjects.push(projectId);
-        localStorage.setItem('likedProjects', JSON.stringify(likedProjects));
-      }
     } catch (error) {
       console.error('Error updating heart count:', error);
     }
