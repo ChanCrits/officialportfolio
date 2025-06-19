@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface Skill {
   name: string;
@@ -7,13 +7,36 @@ interface Skill {
 
 const Skills: React.FC = () => {
   const skills: Skill[] = [
-    { name: 'Photoshop', percentage: 50 },
+    { name: 'Photoshop', percentage: 60 },
     { name: 'Illustrator', percentage: 50 },
-    { name: 'React.Js', percentage: 50 },
+    { name: 'React.Js', percentage: 40 },
     { name: 'Laravel', percentage: 50 },
     { name: 'CSS', percentage: 50 },
     { name: 'HTML', percentage: 50 },
   ];
+
+  // Animated percentages state
+  const [animatedPercentages, setAnimatedPercentages] = useState<number[]>(skills.map(() => 0));
+
+  useEffect(() => {
+    const durations = 1200; // ms
+    const steps = 60;
+    const interval = durations / steps;
+    let currentStep = 0;
+    const increments = skills.map(skill => skill.percentage / steps);
+
+    const anim = setInterval(() => {
+      currentStep++;
+      setAnimatedPercentages(prev =>
+        prev.map((val, i) => {
+          const next = val + increments[i];
+          return next > skills[i].percentage ? skills[i].percentage : next;
+        })
+      );
+      if (currentStep >= steps) clearInterval(anim);
+    }, interval);
+    return () => clearInterval(anim);
+  }, []);
 
   return (
     <div className="w-full max-w-4xl mx-auto p-2 sm:p-4 md:p-6">
@@ -45,13 +68,13 @@ const Skills: React.FC = () => {
                   fill="none" 
                   className="stroke-current text-blue-600" 
                   strokeWidth="1.5" 
-                  strokeDasharray={`${skill.percentage * 0.75} 100`} 
+                  strokeDasharray={`${animatedPercentages[index] * 0.75} 100`} 
                   strokeLinecap="round"
                 />
               </svg>
               {/* Value Text */}
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
-                <span className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-600">{skill.percentage}</span>
+                <span className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-600">{Math.round(animatedPercentages[index])}</span>
                 <span className="text-blue-600 block text-xs sm:text-sm md:text-base">%</span>
               </div>
             </div>
