@@ -12,9 +12,60 @@ interface Project {
   category: 'graphics' | 'web';
 }
 
+// Modal component for project details
+const ProjectModal: React.FC<{
+  project: Project | null;
+  onClose: () => void;
+}> = ({ project, onClose }) => {
+  if (!project) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="bg-gray-900 rounded-xl shadow-2xl max-w-lg w-full p-6 relative border border-white/10">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        <img
+          src={project.image}
+          alt={project.title}
+          className="w-full h-64 object-contain rounded-lg mb-4 bg-black"
+        />
+        <h2 className="text-2xl font-bold text-blue-400 mb-2">{project.title}</h2>
+        <p className="text-gray-300 mb-4 whitespace-pre-line">{project.description}</p>
+        <div className="flex flex-wrap gap-2 mb-4">
+          {project.technologies.map((tech) => (
+            <span
+              key={tech}
+              className="px-3 py-1 bg-blue-600/20 text-blue-400 rounded-full text-sm"
+            >
+              {tech}
+            </span>
+          ))}
+        </div>
+        <div className="flex items-center space-x-2">
+          <a
+            href={project.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+          >
+            View Project
+          </a>
+          <HeartReaction projectId={project.id} projectTitle={project.title} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Projects: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<'all' | 'graphics' | 'web'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [modalProject, setModalProject] = useState<Project | null>(null);
   const navigate = useNavigate();
 
   const projects: Project[] = [
@@ -74,10 +125,23 @@ const Projects: React.FC = () => {
         "Displays bordering countries",
         
       ].join(' '),
-      image: "/newsscraperApi.png",
+      image: "/countryinformationAPI.png",
       technologies: ["Node.js", "React JS", "Cheerio", "REST API"],
       link: "https://github.com/yourusername/newsscraper-api",
       category: "web"
+    },
+    {
+      id: 5,
+      title: "IT Polo T-Shirt Design",
+      description: [
+        "A modern polo t-shirt design for Information Technology students.",
+        "Features a tech-inspired circuit pattern and bold color blocking.",
+        "Designed for both comfort and style in academic settings."
+      ].join(' '),
+      image: "/IT POLO.jpg",
+      technologies: ["Adobe Illustrator", "Photoshop", "Graphic Design"],
+      link: "#",
+      category: "graphics"
     },
     // Add more projects here
   ];
@@ -217,17 +281,18 @@ const Projects: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {filteredProjects.map((project) => (
                 <div key={project.id} className="bg-gray-800/50 rounded-lg overflow-hidden backdrop-blur-sm border border-white/10 hover:border-blue-500/50 transition-all duration-300">
-                  <img 
-                    src={project.image} 
+                  <img
+                    src={project.image}
                     alt={project.title}
-                    className="w-full h-32 object-cover"
+                    className="w-full h-32 object-cover cursor-pointer"
+                    onClick={() => setModalProject(project)}
                   />
                   <div className="p-4">
                     <h3 className="text-lg font-semibold text-blue-400 mb-2">{project.title}</h3>
                     <p className="text-gray-300 mb-3 text-sm">{project.description}</p>
                     <div className="flex flex-wrap gap-1 mb-3">
                       {project.technologies.map((tech) => (
-                        <span 
+                        <span
                           key={tech}
                           className="px-2 py-1 bg-blue-600/20 text-blue-400 rounded-full text-xs"
                         >
@@ -236,7 +301,7 @@ const Projects: React.FC = () => {
                       ))}
                     </div>
                     <div className="flex items-center space-x-2">
-                      <a 
+                      <a
                         href={project.link}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -253,6 +318,8 @@ const Projects: React.FC = () => {
           </div>
         </main>
       </div>
+      {/* Project Modal */}
+      <ProjectModal project={modalProject} onClose={() => setModalProject(null)} />
     </div>
   );
 };
