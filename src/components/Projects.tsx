@@ -21,7 +21,13 @@ const Projects: React.FC = () => {
     {
       id: 1,
       title: "Portfolio Website",
-      description: "A modern portfolio website built with React and Tailwind CSS",
+      description: [
+        "A modern and responsive portfolio website.",
+        "Built using React and Tailwind CSS.",
+        "Showcases personal projects and skills.",
+        "Features smooth animations and transitions.",
+        "Optimized for both desktop and mobile devices."
+      ].join(' '),
       image: "/portfolio.png",
       technologies: ["React", "TypeScript", "Tailwind CSS"],
       link: "https://github.com/yourusername/portfolio",
@@ -29,8 +35,14 @@ const Projects: React.FC = () => {
     },
     {
       id: 2,
-      title: "Logo Design",
-      description: "Creative logo design for a tech startup",
+      title: "Idealist Guild Logo Design",
+      description: [
+        "Creative logo design for a tech startup.",
+        "Represents innovation and collaboration.",
+        "Designed with Adobe Illustrator and Photoshop.",
+        "Versatile for digital and print media.",
+        "Reflects the brand's modern identity."
+      ].join(' '),
       image: "/Sunshade Logo.jpg",
       technologies: ["Adobe Illustrator", "Photoshop"],
       link: "https://behance.net/project",
@@ -39,10 +51,32 @@ const Projects: React.FC = () => {
     {
       id: 3,
       title: "PHP Laravel Qr Code Generator",
-      description: "A simple QR code generator built with PHP Laravel Programme by Alfonz Perez and Christian Earl Siong",
+      description: [
+        "A simple QR code generator web app.",
+        "Built with PHP Laravel framework.",
+        "Developed by Alfonz Perez and Christian Earl Siong.",
+        "Allows users to generate custom QR codes.",
+        "User-friendly interface and fast generation."
+      ].join(' '),
       image: "/QrCodeGen.png",
       technologies: ["php", "Node.js", "Mysql", "laravel"],
       link: "https://github.com/yourusername/ecommerce",
+      category: "web"
+    },
+    {
+      id: 4,
+      title: "Country Information API",
+      description: [
+        "A RESTful API and web app for country data.",
+        "Provides detailed information about every country.",
+        "Includes capital, region, population, and area.",
+        "Shows coordinates, timezones, currencies, and languages.",
+        "Displays bordering countries",
+        
+      ].join(' '),
+      image: "/newsscraperApi.png",
+      technologies: ["Node.js", "React JS", "Cheerio", "REST API"],
+      link: "https://github.com/yourusername/newsscraper-api",
       category: "web"
     },
     // Add more projects here
