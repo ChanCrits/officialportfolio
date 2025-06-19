@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const Header: React.FC = () => {
   return (
@@ -6,15 +7,15 @@ const Header: React.FC = () => {
       <div className="container mx-auto px-4">
         <div className="my-4 backdrop-blur-glass bg-glass border border-white/10 rounded-lg shadow-lg">
           <div className="flex items-center justify-between h-16 px-6">
-            <div className="flex items-center space-x-3">
+            <Link to="/" className="flex items-center space-x-3">
               <img src="/cs logo.png" alt="CS Logo" className="h-8 w-8 object-contain" />
               <span className="text-2xl font-bold tracking-wider">CS Portfolio</span>
-            </div>
+            </Link>
             <nav className="hidden md:flex space-x-8">
-              <a href="#home" className="hover:text-gray-300 transition-colors">Home</a>
-              <a href="#about" className="hover:text-gray-300 transition-colors">About</a>
-              <a href="#projects" className="hover:text-gray-300 transition-colors">Projects</a>
-              <a href="#contact" className="hover:text-gray-300 transition-colors">Contact</a>
+              <Link to="/" className="hover:text-gray-300 transition-colors">Home</Link>
+              <Link to="/about" className="hover:text-gray-300 transition-colors">About</Link>
+              <Link to="/projects" className="hover:text-gray-300 transition-colors">Projects</Link>
+              <Link to="/contact" className="hover:text-gray-300 transition-colors">Contact</Link>
             </nav>
             <button className="md:hidden">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

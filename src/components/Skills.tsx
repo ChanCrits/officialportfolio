@@ -16,12 +16,15 @@ const Skills: React.FC = () => {
   ];
 
   return (
-    <div className="w-full max-w-4xl p-2 sm:p-4">
-      <h2 className="text-xl font-light mb-4 sm:mb-6 text-gray-300">Skills</h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-8">
+    <div className="w-full max-w-4xl mx-auto p-2 sm:p-4 md:p-6">
+      <h2 className="text-lg sm:text-xl md:text-2xl font-light mb-3 sm:mb-4 md:mb-6 text-gray-300 text-center sm:text-left">Skills</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6 md:gap-8">
         {skills.map((skill, index) => (
-          <div key={index} className="flex flex-col items-center">
-            <div className="relative size-20 sm:size-24">
+          <div 
+            key={index} 
+            className="flex flex-col items-center transform transition-transform duration-300 hover:scale-105"
+          >
+            <div className="relative w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24">
               <svg className="rotate-[135deg] size-full" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
                 {/* Background Circle (Gauge) */}
                 <circle 
@@ -47,12 +50,12 @@ const Skills: React.FC = () => {
                 />
               </svg>
               {/* Value Text */}
-              <div className="absolute top-1/2 start-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
-                <span className="text-2xl font-bold text-blue-600">{skill.percentage}</span>
-                <span className="text-blue-600 block text-sm">%</span>
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+                <span className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-600">{skill.percentage}</span>
+                <span className="text-blue-600 block text-xs sm:text-sm md:text-base">%</span>
               </div>
             </div>
-            <span className="mt-2 text-sm text-gray-400">{skill.name}</span>
+            <span className="mt-2 sm:mt-3 text-xs sm:text-sm md:text-base text-gray-400 font-medium">{skill.name}</span>
           </div>
         ))}
       </div>
