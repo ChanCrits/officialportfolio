@@ -6,6 +6,10 @@ interface HeartReactionProps {
   projectTitle: string;
 }
 
+// New dedicated JSONBin for reaction tracking
+const REACTIONS_BIN_ID = '685393a28960c979a5ac910'; // New bin ID for reactions
+const API_KEY = '$2a$10$wMRaiZnIvQURH/FT61YRp.Lc9dRC.hFWzvDYmahRDx5q63cOftnwi';
+
 const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }) => {
   const [heartCount, setHeartCount] = useState<number>(0);
   const [isLiked, setIsLiked] = useState<boolean>(false);
@@ -60,11 +64,8 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
 
     const fetchHeartCount = async () => {
       try {
-        const BIN_ID = '684e32b28a456b7966ae519e';
-        const API_KEY = '$2a$10$wMRaiZnIvQURH/FT61YRp.Lc9dRC.hFWzvDYmahRDx5q63cOftnwi';
-        
-        // Get current heart counts and IP tracking
-        const response = await axios.get(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+        // Get current heart counts and IP tracking from dedicated reactions bin
+        const response = await axios.get(`https://api.jsonbin.io/v3/b/${REACTIONS_BIN_ID}/latest`, {
           headers: {
             'X-Master-Key': API_KEY
           }
@@ -78,13 +79,12 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
         }
 
         const data = response.data.record;
-        const projectHearts = data.projectHearts || {};
-        const ipReactions = data.ipReactions || {};
-        const currentCount = projectHearts[projectId] || 0;
+        const projectReactions = data.projectReactions || {};
+        const currentProject = projectReactions[projectId] || { count: 0, ips: [] };
+        const currentCount = currentProject.count || 0;
         
         // Check if this IP has already reacted to this project
-        const projectIPs = ipReactions[projectId] || [];
-        const hasReacted = projectIPs.includes(userIP);
+        const hasReacted = currentProject.ips.includes(userIP);
         
         setHeartCount(currentCount);
         setIsLiked(hasReacted);
@@ -92,10 +92,10 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
       } catch (error: any) {
         console.error('Error fetching heart count:', error);
         
-        // If it's a 404 error, initialize the bin
+        // If it's a 404 error, initialize the reactions bin
         if (error.response && error.response.status === 404) {
-          console.log('JSONBin not found, initializing...');
-          await initializeJSONBin();
+          console.log('Reactions JSONBin not found, initializing...');
+          await initializeReactionsBin();
         }
         
         setLoading(false);
@@ -105,17 +105,16 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
     fetchHeartCount();
   }, [projectId, userIP]);
 
-  // Initialize JSONBin if it doesn't exist
-  const initializeJSONBin = async () => {
+  // Initialize reactions JSONBin if it doesn't exist
+  const initializeReactionsBin = async () => {
     try {
-      const BIN_ID = '684e32b28a456b7966ae519e';
-      const API_KEY = '$2a$10$wMRaiZnIvQURH/FT61YRp.Lc9dRC.hFWzvDYmahRDx5q63cOftnwi';
-      
-      await axios.put(`https://api.jsonbin.io/v3/b/${BIN_ID}`, 
+      await axios.put(`https://api.jsonbin.io/v3/b/${REACTIONS_BIN_ID}`, 
         { 
-          count: 0,
-          projectHearts: {},
-          ipReactions: {}
+          projectReactions: {},
+          metadata: {
+            created: new Date().toISOString(),
+            description: "Project reaction tracking by IP address"
+          }
         },
         {
           headers: {
@@ -125,9 +124,9 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
         }
       );
       
-      console.log('JSONBin initialized successfully');
+      console.log('Reactions JSONBin initialized successfully');
     } catch (error) {
-      console.error('Error initializing JSONBin:', error);
+      console.error('Error initializing reactions JSONBin:', error);
     }
   };
 
@@ -135,11 +134,8 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
     if (!userIP) return;
 
     try {
-      const BIN_ID = '684e32b28a456b7966ae519e';
-      const API_KEY = '$2a$10$wMRaiZnIvQURH/FT61YRp.Lc9dRC.hFWzvDYmahRDx5q63cOftnwi';
-      
-      // Get current data
-      const response = await axios.get(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+      // Get current data from reactions bin
+      const response = await axios.get(`https://api.jsonbin.io/v3/b/${REACTIONS_BIN_ID}/latest`, {
         headers: {
           'X-Master-Key': API_KEY
         }
@@ -152,10 +148,10 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
       }
 
       const data = response.data.record;
-      const projectHearts = data.projectHearts || {};
-      const ipReactions = data.ipReactions || {};
-      const currentCount = projectHearts[projectId] || 0;
-      const projectIPs = ipReactions[projectId] || [];
+      const projectReactions = data.projectReactions || {};
+      const currentProject = projectReactions[projectId] || { count: 0, ips: [] };
+      const currentCount = currentProject.count || 0;
+      const currentIPs = currentProject.ips || [];
       
       let newCount;
       let newIPs;
@@ -163,22 +159,28 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
       if (isLiked) {
         // Remove reaction
         newCount = Math.max(0, currentCount - 1);
-        newIPs = projectIPs.filter((ip: string) => ip !== userIP);
+        newIPs = currentIPs.filter((ip: string) => ip !== userIP);
       } else {
         // Add reaction
         newCount = currentCount + 1;
-        newIPs = [...projectIPs, userIP];
+        newIPs = [...currentIPs, userIP];
       }
       
-      projectHearts[projectId] = newCount;
-      ipReactions[projectId] = newIPs;
+      // Update project reactions
+      projectReactions[projectId] = {
+        count: newCount,
+        ips: newIPs,
+        lastUpdated: new Date().toISOString()
+      };
       
-      // Update JSONBin with proper structure - preserve existing data
-      await axios.put(`https://api.jsonbin.io/v3/b/${BIN_ID}`, 
+      // Update JSONBin with new structure
+      await axios.put(`https://api.jsonbin.io/v3/b/${REACTIONS_BIN_ID}`, 
         { 
-          count: data.count || 0,
-          projectHearts,
-          ipReactions
+          projectReactions,
+          metadata: {
+            ...data.metadata,
+            lastUpdated: new Date().toISOString()
+          }
         },
         {
           headers: {
@@ -196,7 +198,7 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
       
       // If it's a 404 error, try to initialize and retry
       if (error.response && error.response.status === 404) {
-        await initializeJSONBin();
+        await initializeReactionsBin();
         // Retry the operation after initialization
         setTimeout(() => {
           handleHeartClick();
