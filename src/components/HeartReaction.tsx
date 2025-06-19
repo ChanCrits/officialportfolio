@@ -12,17 +12,29 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
   const [loading, setLoading] = useState<boolean>(true);
   const [userIP, setUserIP] = useState<string>('');
 
-  // Get user's IP address
+  // Get user's IP address with caching
   useEffect(() => {
     const getUserIP = async () => {
+      // Check if we already have a cached IP
+      const cachedIP = localStorage.getItem('userIP');
+      if (cachedIP) {
+        setUserIP(cachedIP);
+        return;
+      }
+
       try {
         const response = await axios.get('https://api.ipify.org?format=json');
-        setUserIP(response.data.ip);
+        const ip = response.data.ip;
+        setUserIP(ip);
+        // Cache the IP for future use
+        localStorage.setItem('userIP', ip);
       } catch (error) {
         console.error('Error getting IP:', error);
         // Fallback: generate a device fingerprint
         const fingerprint = generateDeviceFingerprint();
         setUserIP(fingerprint);
+        // Cache the fingerprint
+        localStorage.setItem('userIP', fingerprint);
       }
     };
 
@@ -31,19 +43,16 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
 
   // Generate a device fingerprint as fallback
   const generateDeviceFingerprint = (): string => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    ctx?.fillText('Device Fingerprint', 10, 10);
-    const fingerprint = canvas.toDataURL();
-    
-    // Combine with user agent and screen resolution
+    // Use more stable device characteristics
     const userAgent = navigator.userAgent;
-    const screenRes = `${window.screen.width}x${window.screen.height}`;
+    const language = navigator.language;
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const platform = navigator.platform;
+    const cookieEnabled = navigator.cookieEnabled;
     
-    // Create a hash-like string
-    const combined = `${fingerprint}-${userAgent}-${screenRes}-${timezone}`;
-    return btoa(combined).substring(0, 16); // Base64 encode and truncate
+    // Create a more stable fingerprint
+    const fingerprint = `${userAgent}-${language}-${timezone}-${platform}-${cookieEnabled}`;
+    return btoa(fingerprint).substring(0, 20); // Base64 encode and truncate
   };
 
   useEffect(() => {
@@ -118,7 +127,7 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
       projectHearts[projectId] = newCount;
       ipReactions[projectId] = newIPs;
       
-      // Update JSONBin with proper structure
+      // Update JSONBin with proper structure - preserve existing data
       await axios.put(`https://api.jsonbin.io/v3/b/${BIN_ID}`, 
         { 
           count: data.count || 0,
@@ -138,6 +147,7 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
       setIsLiked(!isLiked);
     } catch (error) {
       console.error('Error updating heart count:', error);
+      // Don't update local state if the API call failed
     }
   };
 
