@@ -70,6 +70,13 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
           }
         });
 
+        // Check if response has data
+        if (!response.data || !response.data.record) {
+          console.error('Invalid response from JSONBin:', response.data);
+          setLoading(false);
+          return;
+        }
+
         const data = response.data.record;
         const projectHearts = data.projectHearts || {};
         const ipReactions = data.ipReactions || {};
@@ -82,14 +89,47 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
         setHeartCount(currentCount);
         setIsLiked(hasReacted);
         setLoading(false);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching heart count:', error);
+        
+        // If it's a 404 error, initialize the bin
+        if (error.response && error.response.status === 404) {
+          console.log('JSONBin not found, initializing...');
+          await initializeJSONBin();
+        }
+        
         setLoading(false);
       }
     };
 
     fetchHeartCount();
   }, [projectId, userIP]);
+
+  // Initialize JSONBin if it doesn't exist
+  const initializeJSONBin = async () => {
+    try {
+      const BIN_ID = '684e32b28a456b7966ae519e';
+      const API_KEY = '$2a$10$wMRaiZnIvQURH/FT61YRp.Lc9dRC.hFWzvDYmahRDx5q63cOftnwi';
+      
+      await axios.put(`https://api.jsonbin.io/v3/b/${BIN_ID}`, 
+        { 
+          count: 0,
+          projectHearts: {},
+          ipReactions: {}
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Master-Key': API_KEY
+          }
+        }
+      );
+      
+      console.log('JSONBin initialized successfully');
+    } catch (error) {
+      console.error('Error initializing JSONBin:', error);
+    }
+  };
 
   const handleHeartClick = async () => {
     if (!userIP) return;
@@ -104,6 +144,12 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
           'X-Master-Key': API_KEY
         }
       });
+
+      // Check if response has data
+      if (!response.data || !response.data.record) {
+        console.error('Invalid response from JSONBin:', response.data);
+        return;
+      }
 
       const data = response.data.record;
       const projectHearts = data.projectHearts || {};
@@ -145,9 +191,17 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
       // Update local state
       setHeartCount(newCount);
       setIsLiked(!isLiked);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating heart count:', error);
-      // Don't update local state if the API call failed
+      
+      // If it's a 404 error, try to initialize and retry
+      if (error.response && error.response.status === 404) {
+        await initializeJSONBin();
+        // Retry the operation after initialization
+        setTimeout(() => {
+          handleHeartClick();
+        }, 1000);
+      }
     }
   };
 
