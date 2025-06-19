@@ -7,7 +7,7 @@ interface HeartReactionProps {
 }
 
 // New dedicated JSONBin for reaction tracking
-const REACTIONS_BIN_ID = '685393a28960c979a5ac910'; // New bin ID for reactions
+const REACTIONS_BIN_ID = '685393a28960c979a5ac910e'; // New bin ID for reactions
 const API_KEY = '$2a$10$wMRaiZnIvQURH/FT61YRp.Lc9dRC.hFWzvDYmahRDx5q63cOftnwi';
 
 const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }) => {
