@@ -15,7 +15,7 @@ const AnimatedText: React.FC<AnimatedTextProps> = ({ text, delay = 0, className 
       const timeout = setTimeout(() => {
         setDisplayText(prev => prev + text[currentIndex]);
         setCurrentIndex(prev => prev + 1);
-      }, 100); // Speed of typing
+      }, 40); // Faster typing speed
 
       return () => clearTimeout(timeout);
     }
