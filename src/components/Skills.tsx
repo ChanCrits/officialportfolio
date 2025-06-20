@@ -41,7 +41,7 @@ const Skills: React.FC = () => {
   return (
     <div className="w-full max-w-4xl mx-auto p-2 sm:p-4 md:p-6">
       <h2 className="text-lg sm:text-xl md:text-2xl font-light mb-3 sm:mb-4 md:mb-6 text-gray-300 text-center sm:text-left">Skills</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6 md:gap-8">
+      <div className="grid grid-cols-3 gap-3 sm:gap-6 md:gap-8">
         {skills.map((skill, index) => (
           <div 
             key={index} 
