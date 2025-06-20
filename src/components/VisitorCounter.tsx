@@ -30,7 +30,7 @@ const VisitorCounter: React.FC = () => {
           // Update count
           await axios.put(`https://api.jsonbin.io/v3/b/${BIN_ID}`, 
             { count: newCount },
-            {
+            { 
               headers: {
                 'Content-Type': 'application/json',
                 'X-Master-Key': API_KEY
