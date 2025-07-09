@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: react-portfolio
+    env: static
+    buildCommand: npm run build
+    staticPublishPath: ./build
+    staticConfigPath: ./static.json 
