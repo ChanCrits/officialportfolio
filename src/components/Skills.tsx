@@ -11,8 +11,9 @@ const Skills: React.FC = () => {
     { name: 'Illustrator', percentage: 50 },
     { name: 'React.Js', percentage: 40 },
     { name: 'Laravel', percentage: 50 },
-    { name: 'CSS', percentage: 50 },
-    { name: 'HTML', percentage: 50 },
+    { name: 'PHP', percentage: 50 },
+    { name: 'Mysql', percentage: 50 },
+    
   ];
 
   // Animated percentages state
@@ -36,7 +37,7 @@ const Skills: React.FC = () => {
       if (currentStep >= steps) clearInterval(anim);
     }, interval);
     return () => clearInterval(anim);
-  }, []);
+  }, [skills]);
 
   return (
     <div className="w-full max-w-4xl mx-auto p-2 sm:p-4 md:p-6">
