@@ -15,6 +15,24 @@ let reactionsCache: any = null;
 let cacheTimestamp: number = 0;
 const CACHE_DURATION = 30000; // 30 seconds
 
+// Fallback storage using localStorage
+const getFallbackData = (projectId: number) => {
+  try {
+    const stored = localStorage.getItem(`heartReaction_${projectId}`);
+    return stored ? JSON.parse(stored) : { count: 0, ips: [] };
+  } catch {
+    return { count: 0, ips: [] };
+  }
+};
+
+const setFallbackData = (projectId: number, data: any) => {
+  try {
+    localStorage.setItem(`heartReaction_${projectId}`, JSON.stringify(data));
+  } catch (error) {
+    console.error('Error saving fallback data:', error);
+  }
+};
+
 const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }) => {
   const [heartCount, setHeartCount] = useState<number>(0);
   const [isLiked, setIsLiked] = useState<boolean>(false);
@@ -22,6 +40,7 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
   const [userIP, setUserIP] = useState<string>('');
   const [showNotification, setShowNotification] = useState<boolean>(false);
   const [isUpdating, setIsUpdating] = useState<boolean>(false);
+  const [useFallback, setUseFallback] = useState<boolean>(false);
 
   // Get user's IP address with caching
   useEffect(() => {
@@ -66,7 +85,7 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
     return btoa(fingerprint).substring(0, 20); // Base64 encode and truncate
   };
 
-  // Fetch reactions data with caching
+  // Fetch reactions data with caching and fallback
   const fetchReactionsData = useCallback(async () => {
     const now = Date.now();
     
@@ -85,18 +104,19 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
       const response = await axios.get(`https://api.jsonbin.io/v3/b/${REACTIONS_BIN_ID}/latest`, {
         headers: {
           'X-Master-Key': API_KEY
-        }
+        },
+        timeout: 5000 // 5 second timeout
       });
 
       if (!response.data || !response.data.record) {
         console.error('Invalid response from JSONBin:', response.data);
-        setLoading(false);
-        return;
+        throw new Error('Invalid response');
       }
 
       // Cache the data
       reactionsCache = response.data.record;
       cacheTimestamp = now;
+      setUseFallback(false);
 
       const projectReactions = reactionsCache.projectReactions || {};
       const currentProject = projectReactions[projectId] || { count: 0, ips: [] };
@@ -108,12 +128,19 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
     } catch (error: any) {
       console.error('Error fetching heart count:', error);
       
+      // Use fallback data if API fails
+      const fallbackData = getFallbackData(projectId);
+      const hasReacted = fallbackData.ips.includes(userIP);
+      
+      setHeartCount(fallbackData.count || 0);
+      setIsLiked(hasReacted);
+      setUseFallback(true);
+      setLoading(false);
+      
       if (error.response && error.response.status === 404) {
         console.log('Reactions JSONBin not found, initializing...');
         await initializeReactionsBin();
       }
-      
-      setLoading(false);
     }
   }, [projectId, userIP]);
 
@@ -137,7 +164,8 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
           headers: {
             'Content-Type': 'application/json',
             'X-Master-Key': API_KEY
-          }
+          },
+          timeout: 5000
         }
       );
       
@@ -168,73 +196,95 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
     }
 
     try {
-      // Get current data (use cached if available)
-      let data;
-      if (reactionsCache && (Date.now() - cacheTimestamp) < CACHE_DURATION) {
-        data = reactionsCache;
-      } else {
-        const response = await axios.get(`https://api.jsonbin.io/v3/b/${REACTIONS_BIN_ID}/latest`, {
-          headers: {
-            'X-Master-Key': API_KEY
-          }
-        });
-        data = response.data.record;
-      }
-
-      if (!data) {
-        console.error('Invalid response from JSONBin:', data);
-        return;
-      }
-
-      const projectReactions = data.projectReactions || {};
-      const currentProject = projectReactions[projectId] || { count: 0, ips: [] };
-      const currentCount = currentProject.count || 0;
-      const currentIPs = currentProject.ips || [];
-      
-      let newCount;
-      let newIPs;
-      
-      if (isLiked) {
-        // Remove reaction
-        newCount = Math.max(0, currentCount - 1);
-        newIPs = currentIPs.filter((ip: string) => ip !== userIP);
-      } else {
-        // Add reaction
-        newCount = currentCount + 1;
-        newIPs = [...currentIPs, userIP];
-      }
-      
-      // Update project reactions
-      projectReactions[projectId] = {
-        count: newCount,
-        ips: newIPs,
-        lastUpdated: new Date().toISOString()
-      };
-      
-      // Update JSONBin
-      await axios.put(`https://api.jsonbin.io/v3/b/${REACTIONS_BIN_ID}`, 
-        { 
-          projectReactions,
-          metadata: {
-            ...data.metadata,
-            lastUpdated: new Date().toISOString()
-          }
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Master-Key': API_KEY
-          }
+      if (useFallback) {
+        // Use fallback storage
+        const fallbackData = getFallbackData(projectId);
+        const currentIPs = fallbackData.ips || [];
+        
+        let newCount;
+        let newIPs;
+        
+        if (isLiked) {
+          newCount = Math.max(0, fallbackData.count - 1);
+          newIPs = currentIPs.filter((ip: string) => ip !== userIP);
+        } else {
+          newCount = fallbackData.count + 1;
+          newIPs = [...currentIPs, userIP];
         }
-      );
+        
+        const updatedData = { count: newCount, ips: newIPs };
+        setFallbackData(projectId, updatedData);
+        
+        setHeartCount(newCount);
+        setIsLiked(!isLiked);
+      } else {
+        // Use JSONBin API
+        let data;
+        if (reactionsCache && (Date.now() - cacheTimestamp) < CACHE_DURATION) {
+          data = reactionsCache;
+        } else {
+          const response = await axios.get(`https://api.jsonbin.io/v3/b/${REACTIONS_BIN_ID}/latest`, {
+            headers: {
+              'X-Master-Key': API_KEY
+            },
+            timeout: 5000
+          });
+          data = response.data.record;
+        }
 
-      // Update cache
-      reactionsCache = { projectReactions, metadata: data.metadata };
-      cacheTimestamp = Date.now();
+        if (!data) {
+          throw new Error('No data available');
+        }
 
-      // Update local state with actual values
-      setHeartCount(newCount);
-      setIsLiked(!isLiked);
+        const projectReactions = data.projectReactions || {};
+        const currentProject = projectReactions[projectId] || { count: 0, ips: [] };
+        const currentCount = currentProject.count || 0;
+        const currentIPs = currentProject.ips || [];
+        
+        let newCount;
+        let newIPs;
+        
+        if (isLiked) {
+          newCount = Math.max(0, currentCount - 1);
+          newIPs = currentIPs.filter((ip: string) => ip !== userIP);
+        } else {
+          newCount = currentCount + 1;
+          newIPs = [...currentIPs, userIP];
+        }
+        
+        // Update project reactions
+        projectReactions[projectId] = {
+          count: newCount,
+          ips: newIPs,
+          lastUpdated: new Date().toISOString()
+        };
+        
+        // Update JSONBin
+        await axios.put(`https://api.jsonbin.io/v3/b/${REACTIONS_BIN_ID}`, 
+          { 
+            projectReactions,
+            metadata: {
+              ...data.metadata,
+              lastUpdated: new Date().toISOString()
+            }
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Master-Key': API_KEY
+            },
+            timeout: 5000
+          }
+        );
+
+        // Update cache
+        reactionsCache = { projectReactions, metadata: data.metadata };
+        cacheTimestamp = Date.now();
+
+        // Update local state with actual values
+        setHeartCount(newCount);
+        setIsLiked(!isLiked);
+      }
     } catch (error: any) {
       console.error('Error updating heart count:', error);
       
@@ -242,8 +292,10 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
       setHeartCount(isLiked ? heartCount + 1 : Math.max(0, heartCount - 1));
       setIsLiked(isLiked);
       
-      if (error.response && error.response.status === 404) {
-        await initializeReactionsBin();
+      // Switch to fallback mode if API fails
+      if (!useFallback) {
+        setUseFallback(true);
+        console.log('Switching to fallback mode due to API failure');
       }
     } finally {
       setIsUpdating(false);
@@ -271,7 +323,7 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
             ? 'bg-red-600/20 text-red-400 hover:bg-red-600/30' 
             : 'bg-gray-600/20 text-gray-400 hover:bg-gray-600/30 hover:text-gray-300'
         } ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
-        title={`${isLiked ? 'Unlike' : 'Like'} ${projectTitle}`}
+        title={`${isLiked ? 'Unlike' : 'Like'} ${projectTitle}${useFallback ? ' (Offline Mode)' : ''}`}
       >
         <svg 
           className={`w-4 h-4 transition-all duration-200 ${isLiked ? 'fill-current' : 'fill-none'}`} 
@@ -281,6 +333,9 @@ const HeartReaction: React.FC<HeartReactionProps> = ({ projectId, projectTitle }
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
         </svg>
         <span>{heartCount}</span>
+        {useFallback && (
+          <span className="text-xs text-yellow-400 ml-1">●</span>
+        )}
       </button>
 
       {/* Thank You Notification */}
